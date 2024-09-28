@@ -17,20 +17,30 @@ const BASE_URL_PUBLIC_KEY = "https://api.dailymotion.com";
  * Upload video to Dailtmotion with download link.
  */
 export async function uploadVideoAsync(req: Request, res: Response) {
-    const userId: string = req.body.userId;
-    const videoDownloadLink: string = req.body.videoDownloadLink;
-    const title: string = req.body.title;
-    const description: string = req.body.description;
-    const channel: Channel = req.body.channel;
-    const isCreatedForKids: boolean = req.body.isCreatedForKids;
-    const country: CountryOrLanguage = req.body.country;
-    const language: CountryOrLanguage = req.body.language;
-    const accessToken: string = req.body.accessToken;
-
-    res.status(200);
-    return;
-
     try {
+        // get access token
+        const tokenRes = await getAccessTokenAsync(
+            "password",
+            env.API_KEY,
+            env.API_SECRET,
+            ["userinfo", "manage_videos"],
+            env.USERNAME,
+            env.PASSWORD);
+        if (!tokenRes.success) throw new MiarError(
+            (tokenRes.data as MiarErrorModel).status,
+            (tokenRes.data as MiarErrorModel).message);
+
+        const tokenInfo = tokenRes.data as AccessTokenResForPassword;
+        const userId = tokenInfo.uid;
+        const accessToken = tokenInfo.access_token;
+        const videoDownloadLink: string = req.body.videoDownloadLink;
+        const title: string = req.body.title;
+        const description: string = req.body.description;
+        const channel: Channel = req.body.channel;
+        const isCreatedForKids: boolean = req.body.isCreatedForKids;
+        const country: CountryOrLanguage = req.body.country;
+        const language: CountryOrLanguage = req.body.language;
+
         // create the video
         const creationRes = await createVideoAsync(accessToken, userId, videoDownloadLink);
         if (!creationRes.success) throw new MiarError(
