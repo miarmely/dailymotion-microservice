@@ -3,12 +3,15 @@ import { validateChannel, validateCountryOrLanguage } from "../../models/typeMod
 
 export async function uploadVideoAsync(req: Request, res: Response, next: NextFunction) {
     const requiredFields = [
-        "userId",
-        "videoDownloadLink",
+        "api_key",
+        "api_secret",
+        "username",
+        "password",
+        "video_download_link",
         "title",
         "description",
         "channel",
-        "isCreatedForKids",
+        "is_created_for_kids",
         "country",
         "language"
     ];
@@ -32,20 +35,26 @@ export async function uploadVideoAsync(req: Request, res: Response, next: NextFu
 
     // check field values 
     const {
-        userId,
-        videoDownloadLink,
+        api_key,
+        api_secret,
+        username,
+        password,
+        video_download_link,
         title,
         description,
         channel,
-        isCreatedForKids,
+        is_created_for_kids,
         country,
         language
     } = req.body;
-    if (typeof userId != "string") invalidFields.push("userId");
-    if (typeof videoDownloadLink != "string") invalidFields.push("videoDownloadLink");
+    if (typeof api_key != "string") invalidFields.push("api_key");
+    if (typeof api_secret != "string") invalidFields.push("api_secret");
+    if (typeof username != "string") invalidFields.push("username");
+    if (typeof password != "string") invalidFields.push("password");
+    if (typeof video_download_link != "string") invalidFields.push("video_download_link");
     if (typeof title != "string") invalidFields.push("title");
     if (typeof description != "string") invalidFields.push("description");
-    if (typeof isCreatedForKids != "boolean") invalidFields.push("isCreatedForKids");
+    if (typeof is_created_for_kids != "boolean") invalidFields.push("is_created_for_kids");
     if (!validateChannel(channel)) invalidFields.push("channel");
     if (!validateCountryOrLanguage(country)) invalidFields.push("country");
     if (!validateCountryOrLanguage(language)) invalidFields.push("language");

@@ -30,7 +30,7 @@ export function validateChannel(value: any) {
 
     // value checking
     const validValues = ["news", "sport", "auto", "creation", "school", "music", "fun"];
-    if (!(value in validValues)) return false;
+    if (!validValues.includes(value)) return false;
 
     return true;
 }
@@ -40,7 +40,7 @@ export function validateCountryOrLanguage(value: any) {
 
     // value checking
     const validValues = ["tr", "us", "en"];
-    if (!(value in validValues)) return false;
+    if (!validValues.includes(value)) return false;
 
     return true;
 }

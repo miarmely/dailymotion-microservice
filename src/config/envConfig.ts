@@ -12,22 +12,6 @@ class EnvConfig {
         process.env.KEY_TYPE
         : "public"
     );
-    static API_KEY = (process.env.API_KEY ?
-        process.env.API_KEY
-        : ""
-    );
-    static API_SECRET = (process.env.API_SECRET ?
-        process.env.API_SECRET
-        : ""
-    );
-    static USERNAME = (process.env.USERNAME ?
-        process.env.USERNAME
-        : ""
-    );
-    static PASSWORD = (process.env.PASSWORD ?
-        process.env.PASSWORD
-        : ""
-    );
 }
 
 export default EnvConfig;

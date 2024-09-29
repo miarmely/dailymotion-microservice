@@ -1,6 +1,6 @@
 import miarAxios from "../lib/miar-axios";
 import env from "../config/envConfig"
-import { MiarErrorModel, MiarResponseModel } from "../lib/miar-model";
+import miarModel, { MiarErrorModel, MiarResponseModel } from "../lib/miar-model";
 import { MiarContentType } from "../lib/miar-enum";
 import { AccessTokenResForClient, AccessTokenResForPassword, CreationInfo, PublishInfo }
     from "../models/interfaceModels"
@@ -18,30 +18,34 @@ const BASE_URL_PUBLIC_KEY = "https://api.dailymotion.com";
  */
 export async function uploadVideoAsync(req: Request, res: Response) {
     try {
+        const apiSecret: string = req.body.api_secret;
+        const apiKey: string = req.body.api_key;
+        const username: string = req.body.username;
+        const password: string = req.body.password;
+        const videoDownloadLink: string = req.body.video_download_link;
+        const title: string = req.body.title;
+        const description: string = req.body.description;
+        const channel: Channel = req.body.channel;
+        const isCreatedForKids: boolean = req.body.is_created_for_kids;
+        const country: CountryOrLanguage = req.body.country;
+        const language: CountryOrLanguage = req.body.language;
+
         // get access token
         const tokenRes = await getAccessTokenAsync(
             "password",
-            env.API_KEY,
-            env.API_SECRET,
+            apiKey,
+            apiSecret,
             ["userinfo", "manage_videos"],
-            env.USERNAME,
-            env.PASSWORD);
+            username,
+            password);
         if (!tokenRes.success) throw new MiarError(
             (tokenRes.data as MiarErrorModel).status,
             (tokenRes.data as MiarErrorModel).message);
 
-        const tokenInfo = tokenRes.data as AccessTokenResForPassword;
-        const userId = tokenInfo.uid;
-        const accessToken = tokenInfo.access_token;
-        const videoDownloadLink: string = req.body.videoDownloadLink;
-        const title: string = req.body.title;
-        const description: string = req.body.description;
-        const channel: Channel = req.body.channel;
-        const isCreatedForKids: boolean = req.body.isCreatedForKids;
-        const country: CountryOrLanguage = req.body.country;
-        const language: CountryOrLanguage = req.body.language;
-
         // create the video
+        const tokenData = tokenRes.data as AccessTokenResForPassword;
+        const userId: string = tokenData.uid;
+        const accessToken: string = tokenData.access_token;
         const creationRes = await createVideoAsync(accessToken, userId, videoDownloadLink);
         if (!creationRes.success) throw new MiarError(
             (creationRes.data as MiarErrorModel).status,
@@ -67,7 +71,6 @@ export async function uploadVideoAsync(req: Request, res: Response) {
             success: true,
             publishInfo: publishRes.data as PublishInfo
         });
-
     }
     catch (err: any) {
         res.status(err.status);
@@ -115,7 +118,7 @@ async function getAccessTokenAsync(
     username?: string,
     password?: string
 ): Promise<any | MiarErrorModel> {
-    const res = await miarAxios.axiosAsync({
+    const axiosRes = await miarAxios.axiosAsync({
         url: getBaseUrl() + "/oauth/token",
         method: "POST",
         headers: {
@@ -136,9 +139,14 @@ async function getAccessTokenAsync(
                 password: password
             }
     });
-    if (!res.success) return res;
+    if (!axiosRes.success) return axiosRes as MiarResponseModel<MiarErrorModel>;
 
-    return res;
+    // when any error occured in dailymotion services
+    else if ("error" in axiosRes.data) return miarModel.setResponseModel(
+        false,
+        miarModel.setErrorModel(500, axiosRes.data.error, axiosRes.data.error_description));
+
+    return axiosRes as MiarResponseModel<any>;
 }
 async function createVideoAsync(
     accessToken: string,

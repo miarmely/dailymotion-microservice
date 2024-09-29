@@ -1,7 +1,13 @@
 class MiarModel {
-    setErrorModel(status: number, code: string): MiarErrorModel
-    setErrorModel(status: number, code: string, msg: string): MiarErrorModel
-    setErrorModel(model: MiarErrorModel): MiarErrorModel
+    /**
+     * get instance of MiarErrorModel
+     */ setErrorModel(status: number, code: string): MiarErrorModel
+    /**
+     * get instance of MiarErrorModel
+     */ setErrorModel(status: number, code: string, msg: string): MiarErrorModel
+    /**
+     * get instance of MiarErrorModel
+     */ setErrorModel(model: MiarErrorModel): MiarErrorModel
     setErrorModel(...params: any[]) {
         // initialize "miarErr"
         let miarErr: MiarErrorModel;
@@ -27,9 +33,12 @@ class MiarModel {
 
         return miarErr;
     }
-
-    setResponseModel<T>(success: boolean, data: T): MiarResponseModel<T>
-    setResponseModel<T>(model: MiarResponseModel<T>): MiarResponseModel<T>
+    /**
+     * get instance of MiarResponseModel
+     */ setResponseModel<T>(model: MiarResponseModel<T>): MiarResponseModel<T>
+    /**
+     * get instance of MiarResponseModel
+     */ setResponseModel<T>(success: boolean, data: T): MiarResponseModel<T>
     setResponseModel(...params: any[]) {
         // initialize "miarFuncRes"
         let miarFuncRes: MiarResponseModel<any>;
