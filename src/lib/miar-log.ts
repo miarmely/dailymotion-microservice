@@ -1,18 +1,16 @@
 class MiarLog {
-    private nowUTCDate = () => new Date().toUTCString();
-
-    errorWithDate(log: string) {
-        console.log(`${this.nowUTCDate()} - Error - ${log}`);
+    error(log: string) {
+        console.log(`Error - ${log}`);
     }
-    infoWithDate(log: string) {
-        console.log(`${this.nowUTCDate()} - Info - ${log}`);
+    info(log: string) {
+        console.log(`Info - ${log}`);
     }
     infoWithData(log: string, data: {}) {
-        console.log(`${this.nowUTCDate()} - Info - ${log}`);
+        console.log(`Info - ${log}`);
         console.log(data);
     }
-    warningWithDate(log: string) {
-        console.log(`${this.nowUTCDate()} - Warning - ${log}`);
+    warning(log: string) {
+        console.log(`Warning - ${log}`);
     }
 }
 

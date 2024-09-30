@@ -1,13 +1,15 @@
+import { Request, Response } from "express";
+
 import miarAxios from "../lib/miar-axios";
-import env from "../config/envConfig"
+import MiarError from "../lib/miar-error";
 import miarModel, { MiarErrorModel, MiarResponseModel } from "../lib/miar-model";
 import { MiarContentType } from "../lib/miar-enum";
+
+import env from "../config/envConfig"
 import { AccessTokenResForClient, AccessTokenResForPassword, CreationInfo, PublishInfo }
     from "../models/interfaceModels"
 import { Channel, CountryOrLanguage, GrantType, PermissionScope }
     from "../models/typeModels"
-import { Request, Response } from "express";
-import MiarError from "../lib/miar-error";
 
 const BASE_URL_PRIVATE_KEY = "https://partner.api.dailymotion.com";
 const BASE_URL_PUBLIC_KEY = "https://api.dailymotion.com";

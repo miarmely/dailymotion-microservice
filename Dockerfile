@@ -1,0 +1,26 @@
+FROM node:lts-alpine3.19
+
+# add metadatas
+LABEL AUTHOR="Mert Akdemir"
+LABEL GITHUB="miarmely"
+LABEL EMAIL="mert.akdemir.info@gmail.com"
+
+# download project dependencies to image
+WORKDIR /app/
+COPY package.json .
+RUN ["npm", "install"]
+
+# transfer everthing to image
+COPY . .
+
+# build project and run image 
+RUN ["npx", "tsc", "--build"]
+
+# remove src files
+RUN ["rm", "-rf", "./src"]
+
+# set image port
+ENV PORT=3001
+EXPOSE ${PORT}
+
+CMD ["node", "./bin/app"]

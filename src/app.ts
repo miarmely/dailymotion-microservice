@@ -11,5 +11,5 @@ app.use(bodyParser.json());
 app.use("/api", route);
 
 app.listen(env.PORT, () => {
-    miarLog.infoWithDate(`Server with ${env.PORT} is listening. (baseUrl: ${env.BASE_URL})`);
+    miarLog.info(`Server with ${env.PORT} is listening. (baseUrl: ${env.BASE_URL})`);
 })
