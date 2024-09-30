@@ -23,24 +23,56 @@ export type PermissionScope =
     "manage_videos" |
     "userinfo";
 
-/////////////////////////// VALIDATOR ///////////////////////
+/////////////////////////// VALIDATOR ///////////////////////////
+export function validateGrantType(value: any) {
+    return validateForStrValue(value, ["client_credentials", "password"])
+}
 export function validateChannel(value: any) {
+    return validateForStrValue(
+        value,
+        ["news", "sport", "auto", "creation", "school", "music", "fun"]);
+}
+export function validateCountryOrLanguage(value: any) {
+    return validateForStrValue(value, ["tr", "us", "en"]);
+}
+export function validatePermissionScopes(value: any) {
+    return validateForArrayValue(
+        value,
+        [
+            "likes",
+            "manage_likes",
+            "manage_players",
+            "manage_playlists",
+            "manage_podcasts",
+            "manage_subscriptions",
+            "manage_subtitles",
+            "manage_videos",
+            "userinfo"
+        ]);
+}
+function validateForStrValue(value: any, validValues: string[]) {
     // type checking
     if (typeof value != "string") return false;
 
     // value checking
-    const validValues = ["news", "sport", "auto", "creation", "school", "music", "fun"];
     if (!validValues.includes(value)) return false;
 
     return true;
 }
-export function validateCountryOrLanguage(value: any) {
-    // type checking
-    if (typeof value != "string") return false;
+function validateForArrayValue(value: any, validValues: string[]) {
+    // check value whether array
+    if (typeof value != "object"
+        || value.length == undefined) return false;  // when value is "{}"
 
-    // value checking
-    const validValues = ["tr", "us", "en"];
-    if (!validValues.includes(value)) return false;
+    // type checking for all elements of array
+    const array: any[] = value;
+    for (const element of array) {
+        // type checking
+        if (typeof element != "string") return false;
+
+        // value checking
+        if (!validValues.includes(element)) return false;
+    }
 
     return true;
 }

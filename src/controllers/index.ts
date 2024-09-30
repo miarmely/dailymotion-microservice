@@ -18,12 +18,14 @@ const BASE_URL_PUBLIC_KEY = "https://api.dailymotion.com";
 /**
  * Upload video to Dailtmotion with download link.
  */
-export async function uploadVideoAsync(req: Request, res: Response) {
+export async function uploadVideo(req: Request, res: Response) {
     try {
-        const apiSecret: string = req.body.api_secret;
-        const apiKey: string = req.body.api_key;
-        const username: string = req.body.username;
-        const password: string = req.body.password;
+        //const apiSecret: string = req.body.api_secret;
+        //const apiKey: string = req.body.api_key;
+        //const username: string = req.body.username;
+        //const password: string = req.body.password;
+        const accessToken: string = req.body.access_token;
+        const userId: string = req.body.user_id;
         const videoDownloadLink: string = req.body.video_download_link;
         const title: string = req.body.title;
         const description: string = req.body.description;
@@ -32,22 +34,19 @@ export async function uploadVideoAsync(req: Request, res: Response) {
         const country: CountryOrLanguage = req.body.country;
         const language: CountryOrLanguage = req.body.language;
 
-        // get access token
-        const tokenRes = await getAccessTokenAsync(
-            "password",
-            apiKey,
-            apiSecret,
-            ["userinfo", "manage_videos"],
-            username,
-            password);
-        if (!tokenRes.success) throw new MiarError(
-            (tokenRes.data as MiarErrorModel).status,
-            (tokenRes.data as MiarErrorModel).message);
+        // // get access token
+        // const tokenRes = await getAccessTokenAsync(
+        //     "password",
+        //     apiKey,
+        //     apiSecret,
+        //     ["userinfo", "manage_videos"],
+        //     username,
+        //     password);
+        // if (!tokenRes.success) throw new MiarError(
+        //     (tokenRes.data as MiarErrorModel).status,
+        //     (tokenRes.data as MiarErrorModel).message);
+        // const tokenData = tokenRes.data as AccessTokenResForPassword;
 
-        // create the video
-        const tokenData = tokenRes.data as AccessTokenResForPassword;
-        const userId: string = tokenData.uid;
-        const accessToken: string = tokenData.access_token;
         const creationRes = await createVideoAsync(accessToken, userId, videoDownloadLink);
         if (!creationRes.success) throw new MiarError(
             (creationRes.data as MiarErrorModel).status,
@@ -83,73 +82,116 @@ export async function uploadVideoAsync(req: Request, res: Response) {
         });
     }
 }
-
-/////////////////////////////// VALIDATIONS /////////////////////////////////
-
-
-/////////////////////////////// PRIVATE /////////////////////////////////
 /**
-* Get access token with "client_credentials" grant type and save token infos
-* @returns access token
-*/
-async function getAccessTokenAsync(
-    grantType: "client_credentials",
-    apiKey: string,
-    apiSecret: string,
-    scopes: PermissionScope[]
-): Promise<MiarResponseModel<AccessTokenResForClient | MiarErrorModel>>
+ * Get access token with "password" grant type
+ */
+export async function getAccessTokenByPassword(
+    req: Request,
+    res: Response,
+) {
+    const grantType: GrantType = "password";
+    const apiKey: string = req.body.api_key;
+    const apiSecret: string = req.body.api_secret;
+    const scopes: PermissionScope[] = req.body.scopes;
+    const username: string | undefined = req.body.username;
+    const password: string | undefined = req.body.password;
 
-/**
-* Get access token with "password" grant type and save token infos
-* @returns access token
-*/
-async function getAccessTokenAsync(
-    grantType: "password",
-    apiKey: string,
-    apiSecret: string,
-    scopes: PermissionScope[],
-    username: string,
-    password: string
-): Promise<MiarResponseModel<AccessTokenResForPassword | MiarErrorModel>>
-
-async function getAccessTokenAsync(
-    grantType: GrantType,
-    apiKey: string,
-    apiSecret: string,
-    scopes: PermissionScope[],
-    username?: string,
-    password?: string
-): Promise<any | MiarErrorModel> {
-    const axiosRes = await miarAxios.axiosAsync({
-        url: getBaseUrl() + "/oauth/token",
-        method: "POST",
-        headers: {
-            "Content-Type": MiarContentType.urlencoded
-        },
-        data: grantType == "client_credentials" ?
-            {
-                grant_type: "client_credentials",
-                client_id: apiKey,
-                client_secret: apiSecret,
-                scope: scopes.join(" ")
-            } : {
-                grant_type: "password",
+    try {
+        // get access token (THROW)
+        const axiosRes = await miarAxios.axiosAsync({
+            url: getBaseUrl() + "/oauth/token",
+            method: "POST",
+            headers: {
+                "Content-Type": MiarContentType.urlencoded
+            },
+            data: {
+                grant_type: grantType,
                 client_id: apiKey,
                 client_secret: apiSecret,
                 scope: scopes.join(" "),
                 username: username,
                 password: password
             }
-    });
-    if (!axiosRes.success) return axiosRes as MiarResponseModel<MiarErrorModel>;
+        });
+        if (!axiosRes.success) throw new MiarError(
+            (axiosRes.data as MiarErrorModel).status,
+            (axiosRes.data as MiarErrorModel).message);
 
-    // when any error occured in dailymotion services
-    else if ("error" in axiosRes.data) return miarModel.setResponseModel(
-        false,
-        miarModel.setErrorModel(500, axiosRes.data.error, axiosRes.data.error_description));
+        // when any error occured in dailymotion api (THROW)
+        else if ("error" in axiosRes.data) throw new MiarError(
+            500,
+            axiosRes.data.error_description);
 
-    return axiosRes as MiarResponseModel<any>;
+        res.status(200);
+        res.json({
+            status: 200,
+            success: true,
+            data: axiosRes.data
+        });
+
+    } catch (err: any) {
+        res.status(err.status);
+        res.json({
+            status: err.status,
+            success: false,
+            message: err.message
+        });
+    }
 }
+/**
+ * Get access token with "client_credentials" grant type
+ */
+export async function getAccessTokenByClientCredentials(
+    req: Request,
+    res: Response,
+) {
+    const grantType: GrantType = "client_credentials";
+    const apiKey: string = req.body.api_key;
+    const apiSecret: string = req.body.api_secret;
+    const scopes: PermissionScope[] = req.body.scopes;
+
+    try {
+        // get access token (THROW)
+        const axiosRes = await miarAxios.axiosAsync({
+            url: getBaseUrl() + "/oauth/token",
+            method: "POST",
+            headers: {
+                "Content-Type": MiarContentType.urlencoded
+            },
+            data: {
+                grant_type: grantType,
+                client_id: apiKey,
+                client_secret: apiSecret,
+                scope: scopes.join(" ")
+            }
+        });
+        if (!axiosRes.success) throw new MiarError(
+            (axiosRes.data as MiarErrorModel).status,
+            (axiosRes.data as MiarErrorModel).message);
+
+        // when any error occured in dailymotion api (THROW)
+        else if ("error" in axiosRes.data) throw new MiarError(
+            500,
+            axiosRes.data.error_description);
+
+        res.status(200);
+        res.json({
+            status: 200,
+            success: true,
+            data: axiosRes.data
+        });
+
+    } catch (err: any) {
+        res.status(err.status);
+        res.json({
+            status: err.status,
+            success: false,
+            message: err.message
+        });
+    }
+}
+
+/////////////////////////////// PRIVATE /////////////////////////////////
 async function createVideoAsync(
     accessToken: string,
     userId: string,

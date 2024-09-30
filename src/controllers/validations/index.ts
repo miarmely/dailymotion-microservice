@@ -1,73 +1,164 @@
 import { NextFunction, Request, Response } from "express";
-import { validateChannel, validateCountryOrLanguage } from "../../models/typeModels";
+import miarObj from "../../lib/miar-object";
+import {
+    validateChannel, validateCountryOrLanguage, validateGrantType, validatePermissionScopes
+} from "../../models/typeModels";
 
-export async function uploadVideoAsync(req: Request, res: Response, next: NextFunction) {
-    const requiredFields = [
-        "api_key",
-        "api_secret",
-        "username",
-        "password",
-        "video_download_link",
-        "title",
-        "description",
-        "channel",
-        "is_created_for_kids",
-        "country",
-        "language"
-    ];
-    let undefinedFields = [];
-    let invalidFields = [];
+export async function uploadVideo(req: Request, res: Response, next: NextFunction) {
+    { // check values whether missing (RESPONSE)
+        const requiredFields = [
+            "access_token",
+            "user_id",
+            "video_download_link",
+            "title",
+            "description",
+            "channel",
+            "is_created_for_kids",
+            "country",
+            "language"
+        ];
 
-    // check values whether undefined
-    for (const requiredField of requiredFields)
-        if (!(requiredField in req.body)) undefinedFields.push(requiredField);
+        const missingFields = miarObj.getKeysNotInObj(requiredFields, req.body);
+        if (missingFields.length > 0) {
+            res.status(400)
+            res.json({
+                status: 400,
+                success: false,
+                message: `Some fields is missing. (required_fields: ${missingFields.join(", ")})`
+            })
+            return;
+        }
+    }
+    { // check field values whether invalid
+        const {
+            access_token,
+            user_id,
+            video_download_link,
+            title,
+            description,
+            channel,
+            is_created_for_kids,
+            country,
+            language
+        } = req.body;
+        let invalidFields: string[] = [];
 
-    // when any required fields is undefined (RESPONSE)
-    if (undefinedFields.length > 0) {
-        res.status(400)
-        res.json({
-            status: 400,
-            success: false,
-            message: `Some fields is not entered. (required_fields: ${undefinedFields.join(", ")})`
-        })
-        return;
+        if (typeof access_token != "string") invalidFields.push("access_token");
+        if (typeof user_id != "string") invalidFields.push("user_id");
+        if (typeof video_download_link != "string") invalidFields.push("video_download_link");
+        if (typeof title != "string") invalidFields.push("title");
+        if (typeof description != "string") invalidFields.push("description");
+        if (typeof is_created_for_kids != "boolean") invalidFields.push("is_created_for_kids");
+        if (!validateChannel(channel)) invalidFields.push("channel");
+        if (!validateCountryOrLanguage(country)) invalidFields.push("country");
+        if (!validateCountryOrLanguage(language)) invalidFields.push("language");
+
+        if (invalidFields.length > 0) {
+            res.status(400)
+            res.json({
+                status: 400,
+                success: false,
+                message: `Some field values is invalid. (invalid_fields: ${invalidFields.join(", ")})`
+            })
+            return;
+        }
     }
 
-    // check field values 
-    const {
-        api_key,
-        api_secret,
-        username,
-        password,
-        video_download_link,
-        title,
-        description,
-        channel,
-        is_created_for_kids,
-        country,
-        language
-    } = req.body;
-    if (typeof api_key != "string") invalidFields.push("api_key");
-    if (typeof api_secret != "string") invalidFields.push("api_secret");
-    if (typeof username != "string") invalidFields.push("username");
-    if (typeof password != "string") invalidFields.push("password");
-    if (typeof video_download_link != "string") invalidFields.push("video_download_link");
-    if (typeof title != "string") invalidFields.push("title");
-    if (typeof description != "string") invalidFields.push("description");
-    if (typeof is_created_for_kids != "boolean") invalidFields.push("is_created_for_kids");
-    if (!validateChannel(channel)) invalidFields.push("channel");
-    if (!validateCountryOrLanguage(country)) invalidFields.push("country");
-    if (!validateCountryOrLanguage(language)) invalidFields.push("language");
+    next();
+}
+export async function getAccessTokenByPassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    { // check values whether missing (RESPONSE)
+        const requiredFields = [
+            "api_key",
+            "api_secret",
+            "scopes",
+            "username",
+            "password"];
 
-    // when value of any field is invalid (RESPONSE)
-    if (invalidFields.length > 0) {
-        res.status(400)
-        res.json({
-            status: 400,
-            success: false,
-            message: `Some field values is invalid. (invalid_fields: ${invalidFields.join(", ")})`
-        })
-        return;
+        const missingFields = miarObj.getKeysNotInObj(requiredFields, req.body);
+        if (missingFields.length > 0) {
+            res.status(400)
+            res.json({
+                status: 400,
+                success: false,
+                message: `Some fields is missing. (required_fields: ${missingFields.join(", ")})`
+            })
+            return;
+        }
+    }
+    { // check values whether invalid (RESPONSE)
+        const {
+            api_key,
+            api_secret,
+            scopes,
+            username,
+            password
+        } = req.body;
+        let invalidFields: string[] = [];
+        if (typeof api_key != "string") invalidFields.push("api_key");
+        if (typeof api_secret != "string") invalidFields.push("api_secret");
+        if (!validatePermissionScopes(scopes)) invalidFields.push("scopes");
+        if (typeof username != "string") invalidFields.push("username");
+        if (typeof password != "string") invalidFields.push("password");
+        if (invalidFields.length > 0) {
+            res.status(400)
+            res.json({
+                status: 400,
+                success: false,
+                message: `Some field values is invalid. (invalid_fields: ${invalidFields.join(", ")})`
+            })
+            return;
+        }
+    }
+
+    next();
+}
+export async function getAccessTokenByClientCredentials(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    { // check values whether missing (RESPONSE)
+        const requiredFields = [
+            "api_key",
+            "api_secret",
+            "scopes"];
+
+        const missingFields = miarObj.getKeysNotInObj(requiredFields, req.body);
+        if (missingFields.length > 0) {
+            res.status(400)
+            res.json({
+                status: 400,
+                success: false,
+                message: `Some fields is missing. (required_fields: ${missingFields.join(", ")})`
+            })
+            return;
+        }
+    }
+    { // check values whether invalid (RESPONSE)
+        const {
+            api_key,
+            api_secret,
+            scopes
+        } = req.body;
+        let invalidFields: string[] = [];
+
+        if (typeof api_key != "string") invalidFields.push("api_key");
+        if (typeof api_secret != "string") invalidFields.push("api_secret");
+        if (!validatePermissionScopes(scopes)) invalidFields.push("scopes");
+        if (invalidFields.length > 0) {
+            res.status(400)
+            res.json({
+                status: 400,
+                success: false,
+                message: `Some field values is invalid. (invalid_fields: ${invalidFields.join(", ")})`
+            })
+            return;
+        }
     }
 
     next();
