@@ -20,8 +20,7 @@ RUN ["npx", "tsc", "--build"]
 RUN ["rm", "-rf", "./src"]
 
 # set image port
-ENV PORT=3001
+ENV PORT=13001
 EXPOSE ${PORT}
 
-ARG RUN_PATH=./bin/app
-CMD ["node", ${RUN_PATH}]
+CMD ["node", "./bin/app.workers"]

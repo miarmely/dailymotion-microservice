@@ -77,8 +77,8 @@ export async function getAccessTokenByPassword(
             "api_secret",
             "scopes",
             "username",
-            "password"];
-
+            "password"
+        ];
         const missingFields = miarObj.getKeysNotInObj(requiredFields, req.body);
         if (missingFields.length > 0) {
             res.status(400)
@@ -126,7 +126,8 @@ export async function getAccessTokenByClientCredentials(
         const requiredFields = [
             "api_key",
             "api_secret",
-            "scopes"];
+            "scopes"
+        ];
 
         const missingFields = miarObj.getKeysNotInObj(requiredFields, req.body);
         if (missingFields.length > 0) {

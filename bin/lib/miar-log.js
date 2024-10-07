@@ -1,21 +1,22 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 class MiarLog {
-    error(log: string) {
+    error(log) {
         console.log(`Error - ${log}`);
     }
-    errorWithData(log: string, data: { [k: string]: any }) {
+    errorWithData(log, data) {
         console.log(`Error - ${log}`);
         console.log(data);
     }
-    info(log: string) {
+    info(log) {
         console.log(`Info - ${log}`);
     }
-    infoWithData(log: string, data: { [k: string]: any }) {
+    infoWithData(log, data) {
         console.log(`Info - ${log}`);
         console.log(data);
     }
-    warning(log: string) {
+    warning(log) {
         console.log(`Warning - ${log}`);
     }
 }
-
-export default new MiarLog();
+exports.default = new MiarLog();

@@ -1,6 +1,4 @@
-import { MiarErrorModel } from "./miar-model"
-
-class MiarError extends Error {
+export class MiarError extends Error {
     status: number;
     message: string;
 
@@ -10,5 +8,3 @@ class MiarError extends Error {
         this.message = message;
     }
 }
-
-export default MiarError;
