@@ -64,8 +64,11 @@ function validateForArrayValue(value: any, validValues: string[]) {
     if (typeof value != "object"
         || value.length == undefined) return false;  // when value is "{}"
 
-    // type checking for all elements of array
+    // check array whether empty
     const array: any[] = value;
+    if (array.length == 0) return false;
+
+    // type checking for all elements of array
     for (const element of array) {
         // type checking
         if (typeof element != "string") return false;

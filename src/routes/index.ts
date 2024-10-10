@@ -4,9 +4,13 @@ import * as validate from "../controllers/validations"
 
 const router = express.Router();
 
-router.post("/video/upload",
-    validate.uploadVideo,
-    ctl.uploadVideo
+router.post("/video/upload/password",
+    validate.uploadVideoByPassword,
+    ctl.uploadVideoByPassword
+);
+router.post("/video/upload/clientCredentials",
+    validate.uploadVideoByClientCredentials,
+    ctl.uploadVideoByClientCredentials
 );
 router.post("/accessToken/password/get",
     validate.getAccessTokenByPassword,

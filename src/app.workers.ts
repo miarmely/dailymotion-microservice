@@ -5,13 +5,14 @@ dotenv.config();
 
 import miarLog from "./lib/miar-log";
 import env from "./config/envConfig"
-import { uploadVideo } from "./controllers/workers/index/worker";
+import * as workers from "./controllers/workers/index/worker";
 
 const app = express();
 
-app.listen(env.PORT_WORKERS, () => {
-    miarLog.info(`Workers is running at ${env.PORT_WORKERS} port.`);
-
+app.listen(env.PORT_WORKERS, async () => {
     // initialize workers
-    uploadVideo();
+    await workers.uploadVideoByPasswordAsync();
+    await workers.uploadVideoByClientCredentialsAsync();
+
+    miarLog.info(`All workers is running at ${env.PORT_WORKERS} port.`);
 })
