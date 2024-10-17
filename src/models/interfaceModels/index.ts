@@ -1,12 +1,12 @@
 export interface AccessTokenResForClient {
-    access_token: string,
-    token_type: string,
-    expires_in: number,
     scope: string,
-    uid: string,  // user id
+    access_token: string,
+    expires_in: number,  // second
+    refresh_token: string,
+    token_type: string,
 }
 export interface AccessTokenResForPassword extends AccessTokenResForClient {
-    refresh_token: string,
+    uid: string
 }
 export interface PublishInfo {
     id: string,  // video id

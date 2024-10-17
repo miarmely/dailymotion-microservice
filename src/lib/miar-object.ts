@@ -13,21 +13,34 @@ class MiarObject {
         else return data.length;
     }
     /**
-     */ resetNumberValuedObj(...args: Record<string, number>[]): void
+     */ resetNumberValuedObj(obj: Record<string, number>, ignoredKeys?: string[]): void
     /**
-     */ resetNumberValuedObj(...args: Record<string, Record<string, number>>[]): void
-    resetNumberValuedObj(...args: any[]) {
-        for (const obj of args)
-            for (const key in obj) {
-                // reset number valued object
-                if (typeof obj[key] == "number") obj[key] = 0;
+     */ resetNumberValuedObj(obj: Record<string, Record<string, number>>, ignoredKeys?: Record<string, string[]>): void
+    resetNumberValuedObj(obj: any, ignoredKeys?: any) {
+        for (const key in obj) {
+            // reset number valued object (non-nested)
+            if (typeof obj[key] == "number") {
+                // don't reset ignored key
+                if (ignoredKeys && ignoredKeys.includes(key)) continue;
 
-                // reset nested objects
-                else {
-                    let innerObj = obj[key];
-                    for (const _key in innerObj) innerObj[_key] = 0;
+                obj[key] = 0;
+            }
+
+            // reset nested objects
+            else {
+                let innerObj = obj[key];
+                let _ignoredKeys = ignoredKeys as Record<string, string[]>;
+
+                for (const innerKey in innerObj) {
+                    // don't reset ignored key
+                    if (ignoredKeys
+                        && key in _ignoredKeys
+                        && _ignoredKeys[key].includes(innerKey)) continue;
+
+                    innerObj[innerKey] = 0;
                 }
             }
+        }
     }
     /**
      * Change propety/properties of object via redefine.
@@ -35,9 +48,7 @@ class MiarObject {
      * @param newValues values to be changed
      * @returns 
      */
-    changeObjValues(
-        oldObj: { [k: string]: any },
-        newValues: { [k: string]: any }) {
+    changeObjValues(oldObj: { [k: string]: any }, newValues: { [k: string]: any }) {
         // when any property of "newValues" is not in "oldObj" (THROW)
         for (const prop in newValues)
             if (oldObj[prop] == undefined) throw new Error(`"${prop}" is not in old object.`);

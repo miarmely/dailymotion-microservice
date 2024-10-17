@@ -20,6 +20,16 @@ class Env {
         process.env.RABBITMQ_URL
         : "amqp://localhost"
     )
+    static readonly waitTime = {
+        UPLOAD_BY_PASS_IN_MIN: (process.env.WAIT_TIME_UPLOAD_BY_PASS_IN_MIN ?
+            +process.env.WAIT_TIME_UPLOAD_BY_PASS_IN_MIN
+            : 3
+        ),
+        UPLOAD_BY_CLIENT_IN_MIN: (process.env.WAIT_TIME_UPLOAD_BY_CLIENT_IN_MIN ?
+            +process.env.WAIT_TIME_UPLOAD_BY_CLIENT_IN_MIN
+            : 3
+        )
+    }
 }
 
 export default Env;

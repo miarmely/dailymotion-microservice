@@ -1,5 +1,4 @@
 import amqp from "amqplib"
-import { MiarError } from "./miar-error";
 
 export class MiarRabbitMQ {
     url: string;

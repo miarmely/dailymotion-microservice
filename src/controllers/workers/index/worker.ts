@@ -5,9 +5,15 @@ import { MiarError } from "../../../lib/miar-error";
 import { MiarContentType } from "../../../lib/miar-enum";
 import { MiarErrorModel, MiarResponseModel } from "../../../lib/miar-model";
 
+import env from "../../../config/envConfig"
 import * as shared from "./sharedResources"
-import { AccessTokenResForClient, AccessTokenResForPassword, CreationInfo, PublishInfo } from "../../../models/interfaceModels"
-import { Channel, CountryOrLanguage, GrantType, KeyType, PermissionScope } from "../../../models/typeModels"
+import {
+    AccessTokenResForClient,
+    AccessTokenResForPassword, CreationInfo, PublishInfo
+} from "../../../models/interfaceModels"
+import {
+    Channel, CountryOrLanguage, GrantType, KeyType, PermissionScope
+} from "../../../models/typeModels"
 
 const qNamesAndTokens: {
     password: {
@@ -24,6 +30,14 @@ const qNamesAndTokens: {
         }
     },
 } = { password: {}, client: {} };
+const qNamesAndCounters: {
+    [k: string]: {
+        consumedMessage: number
+    }
+} = {}
+const settings = {
+    QUEUE_CONSUMING_RATE_IN_MIN: 1
+}
 
 ////////////////// MAIN FUNCS //////////////////
 /**
@@ -32,6 +46,9 @@ const qNamesAndTokens: {
 export async function uploadVideoByPasswordAsync() {
     try {
         const qName = shared.queueNames.UPLOAD_VIDEO_BY_PASS;
+        qNamesAndCounters[qName] = {
+            consumedMessage: 0
+        };
 
         await shared.miarMq.connectAsync();
         await shared.miarMq.channel?.assertQueue(qName, { durable: true });
@@ -77,8 +94,9 @@ export async function uploadVideoByPasswordAsync() {
                     const creationRes = await createVideoAsync(
                         "public",
                         tokenInfo.accessToken,
-                        tokenInfo.userId,
-                        videoDownloadLink);
+                        videoDownloadLink,
+                        tokenInfo.userId
+                    );
                     if (!creationRes.success) throw new MiarError(
                         5001,
                         (creationRes.data as MiarErrorModel).message);
@@ -99,7 +117,6 @@ export async function uploadVideoByPasswordAsync() {
                     if (!publishRes.success) throw new MiarError(
                         5002,
                         (publishRes.data as MiarErrorModel).message);
-                    const publishInfo = publishRes.data as PublishInfo;
 
                     // save log
                     const croppedVideoTitle = (videoTitle.length <= 30 ?
@@ -107,32 +124,46 @@ export async function uploadVideoByPasswordAsync() {
                         : videoTitle.substring(0, 30) + "..."
                     );
                     miarLog.info("Video is uploaded to dailymotion. " +
+                        `(username: ${username}) ` +
                         `(video_id: ${videoId}) ` +
                         `(video_title: ${croppedVideoTitle})`
                     );
 
-                    await waitBeforePassNextMessageAsync(5);
+                    // wait about "30 sec"
                     shared.miarMq.channel?.ack(msg);
+                    await stopConsumingUntilSpecificTimeAsync(
+                        settings.QUEUE_CONSUMING_RATE_IN_MIN,
+                        uploadVideoByPasswordAsync
+                    );
                 }
                 catch (err: any) {
                     // save log
                     const miarErr: MiarError = err;
                     miarLog.errorWithData(`Consume - Video didn't uploaded to dailymotion. (error_message: ${miarErr.message})`, body);
 
-                    // wait before sending request again
+                    shared.miarMq.channel?.nack(msg, false, true);
+
+                    // start queue consuming again after "waitTime"
                     switch (miarErr.status) {
                         case 5000:  // Access Token Error
-                            await waitBeforePassNextMessageAsync(2);
+                            await stopConsumingUntilSpecificTimeAsync(
+                                2,
+                                uploadVideoByPasswordAsync
+                            );
                             break;
                         case 5001:  // Creation Error
-                            await waitBeforePassNextMessageAsync(30);
+                            await stopConsumingUntilSpecificTimeAsync(
+                                24 * 60,  // 24 hour
+                                uploadVideoByPasswordAsync
+                            );
                             break;
                         case 5002:  // Publishing Error 
-                            await waitBeforePassNextMessageAsync(30);
+                            await stopConsumingUntilSpecificTimeAsync(
+                                24 * 60,  // 24 hour
+                                uploadVideoByPasswordAsync
+                            );
                             break;
                     }
-
-                    shared.miarMq.channel?.nack(msg, false, true);
                 }
             }
         });
@@ -147,7 +178,7 @@ export async function uploadVideoByPasswordAsync() {
  */
 export async function uploadVideoByClientCredentialsAsync() {
     try {
-        const qName = shared.queueNames.UPLOAD_VIDEO_BY_PASS;
+        const qName = shared.queueNames.UPLOAD_VIDEO_BY_CLIENT;
 
         await shared.miarMq.connectAsync();
         await shared.miarMq.channel?.assertQueue(qName, { durable: true });
@@ -160,8 +191,10 @@ export async function uploadVideoByClientCredentialsAsync() {
                 let body: any;
                 try {
                     body = JSON.parse(msg.content.toString());
-                    const accessToken: string = body.access_token;
-                    const userId: string = body.user_id;
+                    const apiKey: string = body.api_key;
+                    const apiSecret: string = body.api_secret;
+                    const scopes: PermissionScope[] = body.scopes;
+                    const channelUsername: string = body.channel_username;
                     const videoDownloadLink: string = body.video_download_link;
                     const description: string = body.description;
                     const channel: Channel = body.channel;
@@ -170,17 +203,33 @@ export async function uploadVideoByClientCredentialsAsync() {
                     const language: CountryOrLanguage = body.language;
                     const videoTitle = body.title;
 
+                    // update access token if expired or invalid
+                    const isSuccess = await updateAccessTokenIfRequired(
+                        "client_credentials",
+                        qName,
+                        apiKey,
+                        apiSecret,
+                        scopes
+                    );
+                    if (!isSuccess) throw new MiarError(5000, "");
+
                     // create video on dailymotion
-                    var creationRes = await createVideoAsync("private", accessToken, userId, videoDownloadLink);
+                    const tokenInfo = qNamesAndTokens.client[qName];
+                    var creationRes = await createVideoAsync(
+                        "private",
+                        tokenInfo.accessToken,
+                        videoDownloadLink,
+                        channelUsername
+                    );
                     if (!creationRes.success) throw new MiarError(
-                        (creationRes.data as MiarErrorModel).status,
+                        5001,
                         (creationRes.data as MiarErrorModel).message);
 
                     // publish video on dailymotion
                     const videoId = (creationRes.data as CreationInfo).id;
                     const publishRes = await publishVideoAsync(
                         "private",
-                        accessToken,
+                        tokenInfo.accessToken,
                         videoId,  // video id
                         videoTitle,
                         description,
@@ -190,9 +239,8 @@ export async function uploadVideoByClientCredentialsAsync() {
                         language
                     );
                     if (!publishRes.success) throw new MiarError(
-                        (publishRes.data as MiarErrorModel).status,
+                        5002,
                         (publishRes.data as MiarErrorModel).message);
-                    const publishInfo = publishRes.data as PublishInfo;
 
                     // save log
                     const croppedVideoTitle = (videoTitle.length <= 30 ?
@@ -204,16 +252,41 @@ export async function uploadVideoByClientCredentialsAsync() {
                         `(video_title: ${croppedVideoTitle})`
                     );
 
-                    await waitBeforePassNextMessageAsync(5);
+                    // wait about 1 min
                     shared.miarMq.channel?.ack(msg);
+                    await stopConsumingUntilSpecificTimeAsync(
+                        settings.QUEUE_CONSUMING_RATE_IN_MIN,
+                        uploadVideoByClientCredentialsAsync
+                    );
                 }
                 catch (err: any) {
                     // save log
-                    const error: MiarError = err;
-                    miarLog.errorWithData(`Consume - Video didn't uploaded to dailymotion. (error_message: ${error.message})`, body);
+                    const miarErr: MiarError = err;
+                    miarLog.errorWithData(`Consume - Video didn't uploaded to dailymotion. (error_message: ${miarErr.message})`, body);
 
-                    await waitBeforePassNextMessageAsync(30);
                     shared.miarMq.channel?.nack(msg, false, true);
+
+                    // wait before send request again
+                    switch (miarErr.status) {
+                        case 5000:  // Access Token Error
+                            await stopConsumingUntilSpecificTimeAsync(
+                                2,
+                                uploadVideoByClientCredentialsAsync
+                            );
+                            break;
+                        case 5001:  // Creation Error
+                            await stopConsumingUntilSpecificTimeAsync(
+                                24 * 60, // 24 hours
+                                uploadVideoByClientCredentialsAsync
+                            );
+                            break;
+                        case 5002:  // Publishing Error 
+                            await stopConsumingUntilSpecificTimeAsync(
+                                24 * 60, // 24 hours
+                                uploadVideoByClientCredentialsAsync
+                            );
+                            break;
+                    }
                 }
             }
         });
@@ -225,23 +298,43 @@ export async function uploadVideoByClientCredentialsAsync() {
 }
 
 ////////////////// SUB-FUNCS //////////////////
+/* for public key
+*/ async function createVideoAsync(keyType: "public", accessToken: string, downloadLink: string, userId: string): Promise<MiarResponseModel<CreationInfo | MiarErrorModel>>
+/* for private key
+*/ async function createVideoAsync(keyType: "private", accessToken: string, downloadLink: string, channelUsername: string): Promise<MiarResponseModel<CreationInfo | MiarErrorModel>>
 async function createVideoAsync(
     keyType: KeyType,
     accessToken: string,
-    userId: string,
-    downloadLink: string
+    downloadLink: string,
+    channelId: string
 ) {
-    const res = await miarAxios.axiosAsync({
-        url: `${shared.getBaseUrl(keyType)}/user/${userId}/videos`,
-        method: "POST",
-        headers: {
-            "Content-Type": MiarContentType.urlencoded,
-            Authorization: "Bearer " + accessToken,
-        },
-        data: { url: downloadLink }
-    });
+    let res: MiarResponseModel<CreationInfo | MiarErrorModel>;
+    switch (keyType) {
+        case "public":
+            res = await miarAxios.axiosAsync({
+                url: `${shared.getBaseUrl(keyType)}/user/${channelId}/videos`,  // channelId == userId
+                method: "POST",
+                headers: {
+                    "Content-Type": MiarContentType.urlencoded,
+                    Authorization: "Bearer " + accessToken,
+                },
+                data: { url: downloadLink }
+            });
+            break;
+        case "private":
+            res = await miarAxios.axiosAsync({
+                url: `${shared.getBaseUrl(keyType)}/rest/user/${channelId}/videos`,  // channelId == channel_username
+                method: "POST",
+                headers: {
+                    "Content-Type": MiarContentType.urlencoded,
+                    Authorization: "Bearer " + accessToken,
+                },
+                data: { url: downloadLink }
+            });
+            break;
+    }
 
-    return res as MiarResponseModel<CreationInfo | MiarErrorModel>;
+    return res;
 }
 async function publishVideoAsync(
     keyType: KeyType,
@@ -254,8 +347,12 @@ async function publishVideoAsync(
     country: CountryOrLanguage,
     language: CountryOrLanguage
 ) {
+    const urlByKeyType = (keyType == "public" ?
+        shared.getBaseUrl(keyType) + "/video/" + videoId
+        : shared.getBaseUrl(keyType) + "/rest/video/" + videoId
+    );
     const res = await miarAxios.axiosAsync({
-        url: shared.getBaseUrl(keyType) + "/video/" + videoId,
+        url: urlByKeyType,
         method: "POST",
         headers: {
             Authorization: "Bearer " + accessToken,
@@ -266,23 +363,26 @@ async function publishVideoAsync(
             title: title,
             description: description,
             channel: channel,
-            tag: ["news", "sport"],
-            //thumbnail_url: videoPosterPath,
+            tag: ["sport", "news"],
             language: language,
             is_created_for_kids: isCreatedForKids,
             country: country,
-
-
         }
     });
 
-    return res as MiarResponseModel<PublishInfo | MiarErrorModel>;
+    return res
 }
-async function waitBeforePassNextMessageAsync(waitTimeInMin: number) {
-    miarLog.info(`Waiting about ${waitTimeInMin} minute...`);
+async function stopConsumingUntilSpecificTimeAsync(waitTimeInMin: number, callbackAsync: () => any) {
+    // stop worker of associated queue
+    await shared.miarMq.disconnectAsync();
 
+    // restart worker of associated queue after "waitTime"
     const waitTimeInMs = waitTimeInMin * 60 * 1000;
-    await miarTime.sleepAsync(waitTimeInMs);
+    setTimeout(async () => await callbackAsync(), waitTimeInMs);
+
+    // save log
+    if (waitTimeInMin < 60) miarLog.info(`Waiting about ${waitTimeInMin} minutes... `);  // min
+    else miarLog.info(`Waiting about ${Math.floor(waitTimeInMin / 60)} hours... `);  // hours
 }
 async function getAcccessTokenByPasswordAsync(
     apiKey: string,
@@ -320,7 +420,7 @@ async function getAcccessTokenByPasswordAsync(
 
         return axiosRes.data as AccessTokenResForPassword;
     } catch (err: any) {
-        miarLog.error(`Access Token - ${err.message}. (username: ${username})`);
+        miarLog.error(`AccessToken - Password - ${err.message}. (username: ${username})`);
         return undefined;
     }
 }
@@ -329,23 +429,59 @@ async function getAcccessTokenByClientCredentialsAsync(
     apiSecret: string,
     scopes: PermissionScope[]
 ) {
-    const grantType: GrantType = "client_credentials";
+    try {
+        // get access token (THROW)
+        const grantType: GrantType = "client_credentials";
+        const axiosRes = await miarAxios.axiosAsync({
+            url: shared.getBaseUrl("private") + "/oauth/v1/token",
+            method: "POST",
+            headers: {
+                "Content-Type": MiarContentType.urlencoded
+            },
+            data: {
+                grant_type: grantType,
+                client_id: apiKey,
+                client_secret: apiSecret,
+                scope: scopes.join(" ")
+            }
+        });
+        if (!axiosRes.success) throw new MiarError(
+            (axiosRes.data as MiarErrorModel).status,
+            (axiosRes.data as MiarErrorModel).message);
+
+        // when any error occured in dailymotion api (THROW)
+        else if ("error" in axiosRes.data) throw new MiarError(
+            500,
+            axiosRes.data.error_description);
+
+        return axiosRes.data as AccessTokenResForClient;
+    } catch (err: any) {
+        miarLog.error(`AccessToken - Client - ${err.message}`);
+        return undefined;
+    }
 
 }
 async function isAccessTokenValidAsync(qName: string, grantType: GrantType) {
+    const qNamesAndTokensOfGrantType = (grantType == "password" ?
+        qNamesAndTokens.password
+        : qNamesAndTokens.client
+    );
+
     // when any access token is not exists
-    if (!(qName in qNamesAndTokens)) return false;
+    if (!(qName in qNamesAndTokensOfGrantType)) return false;
+
     // check expire date
     const nowDateInMs = Date.now();
-    const expireDateInMs = (grantType == "password" ?
-        qNamesAndTokens.password[qName].expiresDateInMs
-        : qNamesAndTokens.client[qName].expiresDateInMs
-    );
+    const expireDateInMs = qNamesAndTokensOfGrantType[qName].expiresDateInMs;
     const validExpireDateInMs = expireDateInMs - 5000;  // early 5 min from real expire date
 
     return nowDateInMs < validExpireDateInMs;
 }
+async function scheduleWorkersAsync() {
 
+
+
+}
 /**
  * By "password" grant type.
  */
@@ -377,48 +513,61 @@ async function updateAccessTokenIfRequired(
     username?: any,
     password?: any
 ) {
-    if (!await isAccessTokenValidAsync(qName, grantType)) {
+    if (!await isAccessTokenValidAsync(qName, grantType))
         switch (grantType) {
             case "password":
-                // get new token info
-                var accessTokenInfo = await getAcccessTokenByPasswordAsync(
-                    apiKey,
-                    apiSecret,
-                    scopes,
-                    username,
-                    password
-                );
-                if (!accessTokenInfo) return false;
+                {
+                    // get new token info
+                    const accessTokenInfo = await getAcccessTokenByPasswordAsync(
+                        apiKey,
+                        apiSecret,
+                        scopes,
+                        username,
+                        password
+                    );
+                    if (!accessTokenInfo) return false;
 
-                // add queue to "qNamesAndTokens" if not exists
-                if (!(qName in qNamesAndTokens.password))
-                    qNamesAndTokens.password[qName] = {
-                        accessToken: "",
-                        userId: "",
-                        expiresDateInMs: 0
-                    };
+                    // add queue to "qNamesAndTokens" if not exists
+                    if (!(qName in qNamesAndTokens.password))
+                        qNamesAndTokens.password[qName] = {
+                            accessToken: "",
+                            userId: "",
+                            expiresDateInMs: 0
+                        };
 
-                // update old token info
-                qNamesAndTokens.password[qName].accessToken = accessTokenInfo.access_token;
-                qNamesAndTokens.password[qName].userId = accessTokenInfo.uid;
-                qNamesAndTokens.password[qName].expiresDateInMs = (Date.now()
-                    + accessTokenInfo.expires_in * 1000
-                );
-
+                    // update old token info
+                    qNamesAndTokens.password[qName].accessToken = accessTokenInfo.access_token;
+                    qNamesAndTokens.password[qName].userId = accessTokenInfo.uid;
+                    qNamesAndTokens.password[qName].expiresDateInMs = (Date.now()
+                        + accessTokenInfo.expires_in * 1000
+                    );
+                }
                 break;
             case "client_credentials":
-                // // update access token
-                // var accessTokenInfo = await getAcccessTokenByClientCredentialsAsync(
-                //     apiKey,
-                //     apiSecret,
-                //     scopes
-                // );
-                // if (!accessTokenInfo) return false;
-                // qNamesAndTokens.password[qName] = accessTokenInfo;
+                {
+                    // get new token info
+                    const accessTokenInfo = await getAcccessTokenByClientCredentialsAsync(
+                        apiKey,
+                        apiSecret,
+                        scopes
+                    );
+                    if (!accessTokenInfo) return false;
 
+                    // add queue to "qNamesAndTokens" if not exists
+                    if (!(qName in qNamesAndTokens.client))
+                        qNamesAndTokens.client[qName] = {
+                            accessToken: "",
+                            expiresDateInMs: 0
+                        };
+
+                    // update old token info
+                    qNamesAndTokens.client[qName].accessToken = accessTokenInfo.access_token;
+                    qNamesAndTokens.client[qName].expiresDateInMs = (Date.now()
+                        + accessTokenInfo.expires_in * 1000
+                    );
+                }
                 break;
         }
-    }
 
     return true;
 }

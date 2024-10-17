@@ -8,21 +8,17 @@ class MiarAxios {
      */
     async axiosAsync(config: AxiosRequestConfig):
         Promise<MiarResponseModel<any> | MiarResponseModel<MiarErrorModel>> {
-        let axiosStatus = 0;
 
         try {
             const axiosRes = await axios(config);
-            if (axiosRes.status != 200) {
-                axiosStatus = axiosRes.status;
-                throw new Error("Axios status is not 200.")
-            };
+            if (axiosRes.status != 200) throw new Error("Axios status is not 200.");
 
             return miarModel.setResponseModel(true, axiosRes.data);
         }
         catch (err: any) {
             return miarModel.setResponseModel(
                 false,
-                miarModel.setErrorModel(axiosStatus, "AxiosError", err.message));
+                miarModel.setErrorModel(500, "AxiosError", err.message));
         }
     }
 }
