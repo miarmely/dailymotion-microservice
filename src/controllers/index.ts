@@ -1,16 +1,9 @@
 import { Request, Response } from "express";
-
 import miarLog from "../lib/miar-log";
-import miarAxios from "../lib/miar-axios";
-import { MiarError } from "../lib/miar-error";
-import { MiarErrorModel } from "../lib/miar-model";
-import { MiarContentType } from "../lib/miar-enum";
-
 import * as shared from "./workers/index/sharedResources"
-import { GrantType, PermissionScope } from "../models/typeModels";
 
 /**
- * Upload video to Dailymotion by "password" grant type.
+ * Upload video to Dailymotion by "Public Key" via "password" grant type.
  */
 export async function uploadVideoByPassword(req: Request, res: Response) {
     { // add request to queue
@@ -39,7 +32,7 @@ export async function uploadVideoByPassword(req: Request, res: Response) {
     }
 }
 /**
- * Upload video to Dailymotion by "client credentials" grant type.
+ * Upload video to Dailymotion by "Private Key" via "client credentials" grant type.
  */
 export async function uploadVideoByClientCredentials(req: Request, res: Response) {
     { // add request to queue

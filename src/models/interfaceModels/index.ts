@@ -8,15 +8,19 @@ export interface AccessTokenResForClient {
 export interface AccessTokenResForPassword extends AccessTokenResForClient {
     uid: string
 }
-export interface PublishInfo {
-    id: string,  // video id
-    title: string,
+export interface PublishResponse extends BaseResponse {
     channel: string,
-    owner: string  // user id
 }
-export interface CreationInfo {
+export interface CreationResponse extends BaseResponse {
+    channel: null,
+}
+export interface CreationAndPublishResponse extends PublishResponse {
+
+}
+
+////////////////////////////////////////////////////////////
+interface BaseResponse {
     id: string,  // video id
-    title: string,
-    channel: string | null,
-    owner: string,  // user id 
+    title: string,  // video title
+    owner: string  // user id
 }
