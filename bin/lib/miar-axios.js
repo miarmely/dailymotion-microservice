@@ -21,18 +21,14 @@ class MiarAxios {
      */
     axiosAsync(config) {
         return __awaiter(this, void 0, void 0, function* () {
-            let axiosStatus = 0;
             try {
                 const axiosRes = yield (0, axios_1.default)(config);
-                if (axiosRes.status != 200) {
-                    axiosStatus = axiosRes.status;
+                if (axiosRes.status != 200)
                     throw new Error("Axios status is not 200.");
-                }
-                ;
                 return miar_model_1.default.setResponseModel(true, axiosRes.data);
             }
             catch (err) {
-                return miar_model_1.default.setResponseModel(false, miar_model_1.default.setErrorModel(axiosStatus, "AxiosError", err.message));
+                return miar_model_1.default.setResponseModel(false, miar_model_1.default.setErrorModel(500, "AxiosError", err.message));
             }
         });
     }

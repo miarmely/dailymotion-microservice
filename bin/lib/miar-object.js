@@ -15,19 +15,29 @@ class MiarObject {
         else
             return data.length;
     }
-    resetNumberValuedObj(...args) {
-        for (const obj of args)
-            for (const key in obj) {
-                // reset number valued object
-                if (typeof obj[key] == "number")
-                    obj[key] = 0;
-                // reset nested objects
-                else {
-                    let innerObj = obj[key];
-                    for (const _key in innerObj)
-                        innerObj[_key] = 0;
+    resetNumberValuedObj(obj, ignoredKeys) {
+        for (const key in obj) {
+            // reset number valued object (non-nested)
+            if (typeof obj[key] == "number") {
+                // don't reset ignored key
+                if (ignoredKeys && ignoredKeys.includes(key))
+                    continue;
+                obj[key] = 0;
+            }
+            // reset nested objects
+            else {
+                let innerObj = obj[key];
+                let _ignoredKeys = ignoredKeys;
+                for (const innerKey in innerObj) {
+                    // don't reset ignored key
+                    if (ignoredKeys
+                        && key in _ignoredKeys
+                        && _ignoredKeys[key].includes(innerKey))
+                        continue;
+                    innerObj[innerKey] = 0;
                 }
             }
+        }
     }
     /**
      * Change propety/properties of object via redefine.
