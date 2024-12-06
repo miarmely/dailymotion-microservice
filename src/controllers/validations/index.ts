@@ -4,7 +4,11 @@ import {
     validateChannel, validateCountryOrLanguage, validateGrantType, validatePermissionScopes
 } from "../../models/typeModels";
 
-export async function uploadVideoByPassword(req: Request, res: Response, next: NextFunction) {
+export async function uploadVideoByPassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
     { // check values whether missing (RESPONSE)
         const requiredFields = [
             "api_key",

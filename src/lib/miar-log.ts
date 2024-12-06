@@ -1,20 +1,15 @@
+type AlertTypes = "Error" | "Info" | "Warning"
+
 class MiarLog {
-    error(log: string) {
-        console.log(`Error - ${log}`);
-    }
-    errorWithData(log: string, data: { [k: string]: any }) {
-        console.log(`Error - ${log}`);
-        console.log(data);
-    }
-    info(log: string) {
-        console.log(`Info - ${log}`);
-    }
-    infoWithData(log: string, data: { [k: string]: any }) {
-        console.log(`Info - ${log}`);
-        console.log(data);
-    }
-    warning(log: string) {
-        console.log(`Warning - ${log}`);
+    private getNowDateInISO = () => (new Date()).toISOString()
+
+    /* without data
+    */ log(alertType: AlertTypes, log: string): void
+    /* with data
+    */ log(alertType: AlertTypes, log: string, data: { [k: string]: any }): void
+    log(alertType: AlertTypes, log: string, data?: any) {
+        console.log(`${this.getNowDateInISO()} - ${alertType} - ${log}`);
+        if (data) console.log(data, "\n")
     }
 }
 

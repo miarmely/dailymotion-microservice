@@ -17,8 +17,9 @@ export async function uploadVideoByPassword(req: Request, res: Response) {
             req.body
         );
         if (!isSuccess) {
-            miarLog.error("Queue - Message couldn't upload to queue. " +
-                `video_title: ${videoTitleForLog}`);
+            miarLog.log("Error", "Queue - Message couldn't upload to queue.", {
+                video_title: videoTitleForLog
+            });
 
             res.status(500);
             res.json({ status: 500, success: false });
@@ -26,7 +27,8 @@ export async function uploadVideoByPassword(req: Request, res: Response) {
         }
     }
     { // save log and give response
-        miarLog.info(`Message added to queue. (video_title: ${videoTitleForLog})`);
+        miarLog.log("Info", `Message added to queue. (video_title: ${videoTitleForLog})`)
+
         res.status(200);
         res.json({ status: 200, success: true });
     }
@@ -46,8 +48,9 @@ export async function uploadVideoByClientCredentials(req: Request, res: Response
             req.body
         );
         if (!isSuccess) {
-            miarLog.error("Queue - Message couldn't upload to queue. " +
-                `video_title: ${videoTitleForLog}`);
+            miarLog.log("Error", "Queue - Message couldn't upload to queue.", {
+                video_title: videoTitleForLog
+            });
 
             res.status(500);
             res.json({ status: 500, success: false });
@@ -55,7 +58,7 @@ export async function uploadVideoByClientCredentials(req: Request, res: Response
         }
     }
     { // save log and give response
-        miarLog.info(`Message added to queue. (video_title: ${videoTitleForLog})`);
+        miarLog.log("Info", `Message added to queue. (video_title: ${videoTitleForLog})`);
         res.status(200);
         res.json({ status: 200, success: true });
     }

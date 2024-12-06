@@ -1,22 +1,47 @@
 import amqp from "amqplib"
+import miarLog from "./miar-log";
 
 export class MiarRabbitMQ {
-    url: string;
+    rabbitMqUrl: string;
     connection: amqp.Connection | undefined;
     channel: amqp.Channel | undefined;
 
-    constructor(url: string) {
-        this.url = url;
+    constructor(rabbitMqUrl: string) {
+        this.rabbitMqUrl = rabbitMqUrl;
     }
 
     async connectAsync() {
-        this.connection = await amqp.connect(this.url);
-        this.channel = await this.connection.createChannel();
+        try {
+            this.connection = await amqp.connect(this.rabbitMqUrl);
+            this.channel = await this.connection.createChannel();
+
+            return true;
+        } catch (err: any) {
+            miarLog.log("Error",
+                "RabbitMQ - An error occured when connecting to RabbitMQ server.",
+                {
+                    status_code: 500,
+                    error: JSON.stringify(err)
+                });
+
+            return false;
+        }
     }
 
     async disconnectAsync() {
-        await this.channel?.close();
-        await this.connection?.close();
+        try {
+            await this.channel?.close();
+            await this.connection?.close();
+            return true;
+        } catch (err: any) {
+            miarLog.log("Error",
+                "RabbitMQ - An error occured when connecting to RabbitMQ server.",
+                {
+                    status_code: 500,
+                    error: JSON.stringify(err)
+                });
+            return false;
+        }
     }
     /**
      * @param qName Queue name.
@@ -35,8 +60,14 @@ export class MiarRabbitMQ {
             return true;
 
         } catch (err: any) {
-            console.log("Error - RabbitMQ - An error occured when sending message to queue. " +
-                `(queue_name: ${qName}) (message: ${JSON.stringify(msg)})`);
+            miarLog.log("Error",
+                "RabbitMQ - An error occured when sending message to queue.",
+                {
+                    status_code: 500,
+                    error: JSON.stringify(err),
+                    queue_name: qName,
+                    queue_message: JSON.stringify(msg)
+                })
             return false;
         }
     }

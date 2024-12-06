@@ -44,7 +44,7 @@ export async function uploadVideoByPasswordAsync() {
         await shared.miarMq.channel?.consume(qName, async (msg) => {
             // when queue is empty
             if (!msg) {
-                miarLog.info("Queue is empty.")
+                miarLog.log("Info", "Queue is empty.")
                 return;
             };
 
@@ -101,11 +101,11 @@ export async function uploadVideoByPasswordAsync() {
                         videoTitle
                         : videoTitle.substring(0, 30) + "..."
                     );
-                    miarLog.info("Video is uploaded to dailymotion. " +
-                        `(username: ${username}) ` +
-                        `(video_id: ${data.id}) ` +
-                        `(video_title: ${croppedVideoTitle})`
-                    );
+                    miarLog.log("Info", "Video is uploaded to dailymotion.", {
+                        username,
+                        video_id: data.id,
+                        video_title: croppedVideoTitle
+                    });
 
                     // wait about "30 sec"
                     shared.miarMq.channel?.ack(msg);
@@ -117,7 +117,10 @@ export async function uploadVideoByPasswordAsync() {
                 catch (err: any) {
                     // save log
                     const miarErr: MiarError = err;
-                    miarLog.errorWithData(`Consume - Video didn't uploaded to dailymotion. (error_message: ${miarErr.message})`, body);
+                    miarLog.log("Error", "Video didn't uploaded to dailymotion.", {
+                        error_message: miarErr.message,
+                        body
+                    })
 
                     shared.miarMq.channel?.nack(msg, false, true);
 
@@ -141,7 +144,7 @@ export async function uploadVideoByPasswordAsync() {
         });
     } catch (err: any) {
         const error: MiarError = err;
-        miarLog.error(`General - Worker of "uploadVideo" didn't executed. ` +
+        miarLog.log("Error", `General - Worker of "uploadVideo" didn't executed. ` +
             `(error_message: ${error.message})`);
     }
 }
@@ -209,11 +212,11 @@ export async function uploadVideoByClientCredentialsAsync() {
                         title
                         : title.substring(0, 30) + "..."
                     );
-                    miarLog.info("Video is uploaded to dailymotion. " +
-                        `(channel_username: ${channelUsername}) ` +
-                        `(video_id: ${data.id}) ` +
-                        `(video_title: ${croppedVideoTitle})`
-                    );
+                    miarLog.log("Info", "Video is uploaded to dailymotion.", {
+                        channel_username: channelUsername,
+                        video_id: data.id,
+                        video_title: croppedVideoTitle
+                    });
 
                     // wait about 1 min
                     shared.miarMq.channel?.ack(msg);
@@ -225,7 +228,10 @@ export async function uploadVideoByClientCredentialsAsync() {
                 catch (err: any) {
                     // save log
                     const miarErr: MiarError = err;
-                    miarLog.errorWithData(`Consume - Video didn't uploaded to dailymotion. (error_message: ${miarErr.message})`, body);
+                    miarLog.log("Error", "Consume - Video didn't uploaded to dailymotion.", {
+                        error_message: miarErr.message,
+                        body
+                    });
 
                     shared.miarMq.channel?.nack(msg, false, true);
 
@@ -253,9 +259,10 @@ export async function uploadVideoByClientCredentialsAsync() {
             }
         });
     } catch (err: any) {
-        const error: MiarError = err;
-        miarLog.error(`General - Worker of "uploadVideo" didn't executed. ` +
-            `(error_message: ${error.message})`);
+        const miarErr: MiarError = err;
+        miarLog.log("Error", `General - Worker of "uploadVideo" didn't executed.`, {
+            error_message: miarErr.message
+        });
     }
 }
 
@@ -315,9 +322,11 @@ async function stopConsumingUntilSpecificTimeAsync(
     setTimeout(async () => await callbackAsync(), waitTimeInMs);
 
     // save log
-    if (waitTimeInMin < 1) miarLog.info(`Waiting about ${waitTimeInMin * 60} seconds... `);
-    else if (waitTimeInMin < 60) miarLog.info(`Waiting about ${waitTimeInMin} minutes... `);
-    else miarLog.info(`Waiting about ${Math.floor(waitTimeInMin / 60)} hours... `);
+    let logMsg: string;
+    if (waitTimeInMin < 1) logMsg = `Waiting about ${waitTimeInMin * 60} seconds...`
+    else if (waitTimeInMin < 60) logMsg = `Waiting about ${waitTimeInMin} minutes...`
+    else logMsg = `Waiting about ${Math.floor(waitTimeInMin / 60)} hours...`
+    miarLog.log("Info", logMsg)
 }
 
 async function getAcccessTokenByPasswordAsync(
@@ -356,7 +365,10 @@ async function getAcccessTokenByPasswordAsync(
 
         return axiosRes.data as AccessTokenResForPassword;
     } catch (err: any) {
-        miarLog.error(`AccessToken - Password - ${err.message}. (username: ${username})`);
+        miarLog.log("Error", "AccessToken - Password", {
+            error_message: err.message,
+            username
+        });
         return undefined;
     }
 }
@@ -393,7 +405,9 @@ async function getAcccessTokenByClientCredentialsAsync(
 
         return axiosRes.data as AccessTokenResForClient;
     } catch (err: any) {
-        miarLog.error(`AccessToken - Client - ${err.message}`);
+        miarLog.log("Error", "AccessToken - Client", {
+            error_message: err.message
+        });
         return undefined;
     }
 

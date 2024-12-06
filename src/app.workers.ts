@@ -10,7 +10,7 @@ import * as workers from "./controllers/workers/index/worker";
 const app = express();
 
 app.listen(env.PORT_WORKERS, async () => {
-    miarLog.info(`All workers will be run at ${env.PORT_WORKERS} port.`);
+    miarLog.log("Info", `All workers will be run at ${env.PORT_WORKERS} port.`);
 
     // run the workers
     await workers.uploadVideoByPasswordAsync();

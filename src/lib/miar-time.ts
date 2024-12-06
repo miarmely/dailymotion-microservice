@@ -21,10 +21,10 @@ class MiarTime {
         })
     }
     /**
- * Get difference of dates.
- * @param unit unit of time. It effects the return.
- * @returns time in millisecond or second.
- */
+     * Get difference of dates.
+     * @param unit unit of time. It effects the return.
+     * @returns time in millisecond or second.
+     */
     howMuchTimePassed(
         startDateInMs: number,
         unit: MiarUnit,

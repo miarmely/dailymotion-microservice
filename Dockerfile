@@ -23,4 +23,4 @@ RUN ["rm", "-rf", "./src"]
 ENV PORT=3001
 EXPOSE ${PORT}
 
-CMD ["node", "./bin/app"]
+CMD ["node", "./dist/app"]
